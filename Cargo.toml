@@ -1,0 +1,10 @@
+[package]
+name = "moko256_systemd_stdio_logger"
+version = "1.0.0"
+authors = ["moko256"]
+edition = "2021"
+description = "Simple stdio logger for systemd service."
+license = "MIT"
+
+[dependencies]
+log = "0.4"
