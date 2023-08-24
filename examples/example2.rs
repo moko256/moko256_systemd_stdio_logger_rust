@@ -1,10 +1,9 @@
-use logger::LoggerModuleFilterKey;
 use moko256_systemd_stdio_logger as logger;
 
 fn main() {
     logger::init([
-        LoggerModuleFilterKey::Module("example::mod1", log::LevelFilter::Error),
-        LoggerModuleFilterKey::Default(log::LevelFilter::Trace),
+        logger::LoggerModuleFilterKey::Module("example::mod1", log::LevelFilter::Error),
+        logger::LoggerModuleFilterKey::Default(log::LevelFilter::Trace),
     ])
     .unwrap();
 
