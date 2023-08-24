@@ -31,7 +31,7 @@ fn most_verbose_level(module_max_levels: &[LoggerModuleFilterKey]) -> LevelFilte
         }
     }
 
-    most_verbose_level.clone()
+    most_verbose_level
 }
 
 static APP_LOGGER: OnceLock<AppLogger> = OnceLock::new();
@@ -60,7 +60,7 @@ impl Log for AppLogger {
                     }
                 }
                 LoggerModuleFilterKey::Default(level) => {
-                    if default_level == None {
+                    if default_level.is_none() {
                         default_level = Some(*level);
                     }
                 }
