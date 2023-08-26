@@ -2,7 +2,7 @@ use moko256_systemd_stdio_logger as logger;
 
 fn main() {
     logger::init([
-        logger::LoggerModuleFilterKey::Module("example::mod1", log::LevelFilter::Error),
+        logger::LoggerModuleFilterKey::Module("example2::mod1", log::LevelFilter::Error),
         logger::LoggerModuleFilterKey::Default(log::LevelFilter::Trace),
     ])
     .unwrap();
