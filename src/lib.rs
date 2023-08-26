@@ -1,5 +1,3 @@
-use std::sync::OnceLock;
-
 use log::*;
 
 // Public interfaces.
@@ -14,11 +12,11 @@ pub fn init(
     let module_max_levels = module_max_levels.into();
 
     set_max_level(most_verbose_level(&module_max_levels));
-    set_logger(APP_LOGGER.get_or_init(|| AppLogger { module_max_levels }))
+    set_boxed_logger(Box::new(AppLogger { module_max_levels }))
 }
 
 // Internals.
-
+#[inline]
 fn most_verbose_level(module_max_levels: &[LoggerModuleFilterKey]) -> LevelFilter {
     let mut most_verbose_level = LevelFilter::Off;
     for level in module_max_levels {
@@ -34,20 +32,19 @@ fn most_verbose_level(module_max_levels: &[LoggerModuleFilterKey]) -> LevelFilte
     most_verbose_level
 }
 
-static APP_LOGGER: OnceLock<AppLogger> = OnceLock::new();
+#[inline]
+fn level_to_severity_rfc5424(level: Level) -> usize {
+    match level {
+        Level::Trace => 7,
+        Level::Debug => 7,
+        Level::Info => 6,
+        Level::Warn => 4,
+        Level::Error => 3,
+    }
+}
+
 struct AppLogger {
     module_max_levels: Vec<LoggerModuleFilterKey>,
-}
-impl AppLogger {
-    fn level_to_severity_rfc5424(level: Level) -> usize {
-        match level {
-            Level::Trace => 7,
-            Level::Debug => 7,
-            Level::Info => 6,
-            Level::Warn => 4,
-            Level::Error => 3,
-        }
-    }
 }
 impl Log for AppLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
@@ -79,7 +76,7 @@ impl Log for AppLogger {
         if self.enabled(record.metadata()) {
             println!(
                 "<{}>{}: {}",
-                AppLogger::level_to_severity_rfc5424(record.level()),
+                level_to_severity_rfc5424(record.level()),
                 record.target(),
                 record.args()
             );
@@ -97,6 +94,10 @@ mod tests {
 
     use crate::{AppLogger, LoggerModuleFilterKey};
 
+    fn metadata<'a>(target: &'a str, level: Level) -> Metadata {
+        Metadata::builder().target(target).level(level).build()
+    }
+
     #[test]
     fn most_verbose_level() {
         assert_eq!(
@@ -113,15 +114,7 @@ mod tests {
         let logger = AppLogger {
             module_max_levels: vec![],
         };
-        assert_eq!(
-            logger.enabled(
-                &Metadata::builder()
-                    .target("test1")
-                    .level(Level::Error)
-                    .build()
-            ),
-            false
-        );
+        assert_eq!(logger.enabled(&metadata("test1", Level::Error)), false);
     }
 
     #[test]
@@ -129,43 +122,11 @@ mod tests {
         let logger = AppLogger {
             module_max_levels: vec![LoggerModuleFilterKey::Module("test1", LevelFilter::Info)],
         };
-        assert_eq!(
-            logger.enabled(
-                &Metadata::builder()
-                    .target("test1")
-                    .level(log::Level::Info)
-                    .build()
-            ),
-            true
-        );
-        assert_eq!(
-            logger.enabled(
-                &Metadata::builder()
-                    .target("test1")
-                    .level(log::Level::Trace)
-                    .build()
-            ),
-            false
-        );
+        assert_eq!(logger.enabled(&metadata("test1", Level::Info)), true);
+        assert_eq!(logger.enabled(&metadata("test1", Level::Trace)), false);
 
-        assert_eq!(
-            logger.enabled(
-                &Metadata::builder()
-                    .target("test2")
-                    .level(log::Level::Info)
-                    .build()
-            ),
-            false
-        );
-        assert_eq!(
-            logger.enabled(
-                &Metadata::builder()
-                    .target("test2")
-                    .level(log::Level::Trace)
-                    .build()
-            ),
-            false
-        );
+        assert_eq!(logger.enabled(&metadata("test2", Level::Info)), false);
+        assert_eq!(logger.enabled(&metadata("test2", Level::Trace)), false);
     }
 
     #[test]
@@ -176,61 +137,13 @@ mod tests {
                 LoggerModuleFilterKey::Default(LevelFilter::Warn),
             ],
         };
-        assert_eq!(
-            logger.enabled(
-                &Metadata::builder()
-                    .target("test1")
-                    .level(log::Level::Warn)
-                    .build()
-            ),
-            true
-        );
-        assert_eq!(
-            logger.enabled(
-                &Metadata::builder()
-                    .target("test1")
-                    .level(log::Level::Info)
-                    .build()
-            ),
-            true
-        );
-        assert_eq!(
-            logger.enabled(
-                &Metadata::builder()
-                    .target("test1")
-                    .level(log::Level::Trace)
-                    .build()
-            ),
-            false
-        );
+        assert_eq!(logger.enabled(&metadata("test1", Level::Warn)), true);
+        assert_eq!(logger.enabled(&metadata("test1", Level::Info)), true);
+        assert_eq!(logger.enabled(&metadata("test1", Level::Trace)), false);
 
-        assert_eq!(
-            logger.enabled(
-                &Metadata::builder()
-                    .target("test2")
-                    .level(log::Level::Warn)
-                    .build()
-            ),
-            true
-        );
-        assert_eq!(
-            logger.enabled(
-                &Metadata::builder()
-                    .target("test2")
-                    .level(log::Level::Info)
-                    .build()
-            ),
-            false
-        );
-        assert_eq!(
-            logger.enabled(
-                &Metadata::builder()
-                    .target("test2")
-                    .level(log::Level::Trace)
-                    .build()
-            ),
-            false
-        );
+        assert_eq!(logger.enabled(&metadata("test2", Level::Warn)), true);
+        assert_eq!(logger.enabled(&metadata("test2", Level::Info)), false);
+        assert_eq!(logger.enabled(&metadata("test2", Level::Trace)), false);
     }
 
     #[test]
@@ -243,43 +156,11 @@ mod tests {
                 LoggerModuleFilterKey::Default(LevelFilter::Trace),
             ],
         };
-        assert_eq!(
-            logger.enabled(
-                &Metadata::builder()
-                    .target("test1")
-                    .level(log::Level::Error)
-                    .build()
-            ),
-            true
-        );
-        assert_eq!(
-            logger.enabled(
-                &Metadata::builder()
-                    .target("test1")
-                    .level(log::Level::Trace)
-                    .build()
-            ),
-            false
-        );
+        assert_eq!(logger.enabled(&metadata("test1", Level::Error)), true);
+        assert_eq!(logger.enabled(&metadata("test1", Level::Trace)), false);
 
-        assert_eq!(
-            logger.enabled(
-                &Metadata::builder()
-                    .target("test2")
-                    .level(log::Level::Error)
-                    .build()
-            ),
-            true
-        );
-        assert_eq!(
-            logger.enabled(
-                &Metadata::builder()
-                    .target("test2")
-                    .level(log::Level::Trace)
-                    .build()
-            ),
-            false
-        );
+        assert_eq!(logger.enabled(&metadata("test2", Level::Error)), true);
+        assert_eq!(logger.enabled(&metadata("test2", Level::Trace)), false);
     }
 
     #[test]
@@ -288,12 +169,7 @@ mod tests {
             module_max_levels: vec![LoggerModuleFilterKey::Module("test1", LevelFilter::Error)],
         };
         assert_eq!(
-            logger.enabled(
-                &Metadata::builder()
-                    .target("test1::child::module")
-                    .level(log::Level::Error)
-                    .build()
-            ),
+            logger.enabled(&metadata("test1::child", Level::Error)),
             true
         );
     }

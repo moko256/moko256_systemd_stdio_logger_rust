@@ -7,4 +7,7 @@ description = "Simple stdio logger for systemd service."
 license = "MIT"
 
 [dependencies]
-log = "0.4"
+
+[dependencies.log]
+version = "0.4"
+features = ["std"]
