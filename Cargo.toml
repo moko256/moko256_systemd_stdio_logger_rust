@@ -1,6 +1,6 @@
 [package]
 name = "moko256_systemd_stdio_logger"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["moko256"]
 edition = "2021"
 description = "Simple stdio logger for systemd service."
