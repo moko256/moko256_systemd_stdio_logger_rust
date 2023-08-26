@@ -11,7 +11,7 @@ application: INFO, other libraries: WARN
 ```toml
 [dependencies]
 log = { version = "0.4", features = ["max_level_info"]}
-moko256_systemd_stdio_logger = { git = "https://github.com/moko256/moko256_systemd_stdio_logger_rust.git", tag = "v1.0.0" }
+moko256_systemd_stdio_logger = { git = "https://github.com/moko256/moko256_systemd_stdio_logger_rust.git", tag = "v1.0.1" }
 ```
 
 ```rust
